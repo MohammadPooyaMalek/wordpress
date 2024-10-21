@@ -1,0 +1,72 @@
+networks:
+  wp_net:
+    name: wp_net
+    driver: bridge
+    external: false
+    
+volumes:
+  wp-data:
+    name: wp-data
+    driver: local
+  db-data:
+    name: db-data
+    driver: local
+
+services:
+  mysql:
+    image: mysql:5.7
+    container_name: mysql
+    hostname: mysql
+    restart: always
+    networks:
+      - wp_net
+    volumes:
+      - db-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 1m30s
+      timeout: 30s
+      retries: 10
+      start_period: 20s
+    environment:
+      - MYSQL_ROOT_PASSWORD=sdvfsacsiojoijsaefawefmwervs
+      - MYSQL_DATABASE=Devops
+      - MYSQL_USER=Devops
+      - MYSQL_PASSWORD=sdvfsacsiojoijsaefawefmwervs
+
+  wordpress:
+    image: wordpress:latest
+    container_name: wordpress
+    hostname: wordpress
+    restart: always
+    networks:
+      - wp_net
+    volumes:
+      - wp-data:/var/www/html/
+    environment:
+      - WORDPRESS_DB_PASSWORD=sdvfsacsiojoijsaefawefmwervs
+      - WORDPRESS_DB_HOST=mysql:3306
+      - WORDPRESS_DB_USER=Devops
+      - WORDPRESS_DB_NAME=Devops
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+  nginx:
+    image: nginx:latest
+    container_name: nginx
+    hostname: nginx
+    restart: always
+    ports:
+      - 80:80
+      - 443:443
+    networks:
+      wp_net:
+    volumes:
+      - ./nginx/conf.d:/etc/nginx/conf.d
+      - ./nginx/certs:/etc/nginx/certs
+    depends_on:
+      mysql:
+        condition: service_healthy
+      wordpress:
+        condition: service_started
